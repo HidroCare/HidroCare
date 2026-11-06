@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HidroCare - Cadastrar Cenário</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="fundo-painel">
+    <header class="cabecalho-principal">
+        <div class="cabecalho-conteudo">
+            <h1 class="logo-painel">HidroCare <span class="divisor-logo">|</span> Gestão</h1>
+            <div class="usuario-info">
+                <span>Professor: Dr. Thiago</span>
+                <a href="/index.html" class="link-sair">Sair</a>
+            </div>
+        </div>
+    </header>
+    <main class="painel-container">
+        <div class="cartao-form">
+            <div class="cartao-cabecalho">
+                <h2>Cadastrar Novo Cenário Clínico</h2>
+                <p>Preencha os dados do caso e monte o gabarito oficial.</p>
+            </div>
+            <form class="formulario-cenario">
+                <div class="linha-formulario">
+                    <div class="grupo-input flex-1">
+                        <label for="paciente">Paciente Fictício</label>
+                        <select id="paciente" class="input-estilizado" required>
+                            <option value="">Selecione um paciente...</option>
+                            <option value="1">João Silva - Pós-operatório</option>
+                            <option value="2">Maria Souza - UTI Cardiológica</option>
+                        </select>
+                    </div>
+                    <div class="grupo-input flex-2">
+                        <label for="titulo">Título da Atividade</label>
+                        <input type="text" id="titulo" class="input-estilizado" placeholder="Ex: Controle hídrico rigoroso - 24h" required>
+                    </div>
+                </div>
+                <div class="grupo-input">
+                    <label for="enunciado">Enunciado Clínico</label>
+                    <textarea id="enunciado" class="input-estilizado textarea" rows="4" placeholder="Descreva a situação clínica e os dados iniciais do paciente..." required></textarea>
+                </div>
+                <div class="secao-gabarito">
+                    <h3>Gabarito Obrigatório (Entradas e Saídas)</h3>
+                    
+                    <table class="tabela-dados">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Horário</th>
+                                <th>Descrição do Fluido / Via</th>
+                                <th>Valor Esperado (mL)</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Exemplo de item já inserido -->
+                            <tr>
+                                <td><span class="badge entrada">Entrada</span></td>
+                                <td>08:00</td>
+                                <td>Soro Fisiológico 0.9% IV</td>
+                                <td>500</td>
+                                <td><button type="button" class="btn-tabela remover">Remover</button></td>
+                            </tr>
+                            <!-- Linha para adição de novo item -->
+                            <tr class="linha-adicao">
+                                <td>
+                                    <select class="input-estilizado-sm">
+                                        <option>Entrada</option>
+                                        <option>Saída</option>
+                                    </select>
+                                </td>
+                                <td><input type="time" class="input-estilizado-sm"></td>
+                                <td><input type="text" class="input-estilizado-sm" placeholder="Ex: Diurese / Vômito"></td>
+                                <td><input type="number" class="input-estilizado-sm" placeholder="0"></td>
+                                <td><button type="button" class="btn-tabela adicionar">Adicionar</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="acoes-formulario">
+                    <a href="painel.html" class="btn-voltar">Cancelar</a>
+                    <button type="submit" class="btn-salvar">Publicar Cenário</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HidroCare - Resolução de Atividade</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="fundo-painel">
+
+    <!-- Cabeçalho da página do estudante -->
+    <header class="cabecalho-principal estudante">
+        <div class="cabecalho-conteudo">
+            <h1 class="logo-painel">HidroCare <span class="divisor-logo">|</span> Atividade</h1>
+            <div class="usuario-info">
+                <span>Estudante: Larissa Prado</span>
+                <a href="login.html" class="link-sair">Sair</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="painel-container">
+        
+        <!-- Bloco dinâmico com os dados do paciente escolhido pelo estudante -->
+        <div class="bloco-paciente">
+            <div class="linha-formulario mb-2">
+                <div class="flex-1">
+                    <label for="selecionar-paciente" class="form-label fw-bold text-primary">Selecione o Paciente:</label>
+                    <select id="selecionar-paciente" class="input-estilizado">
+                        <option value="joao">João Silva - Pós-operatório (6h)</option>
+                        <option value="maria">Maria Souza - UTI Cardiológica</option>
+                    </select>
+                </div>
+            </div>
+            
+            <hr class="my-3">
+
+            <h3>Detalhes do Caso Clínico</h3>
+            <p>Masculino, 45 anos, 70kg. Paciente em pós-operatório de cirurgia abdominal. Recebeu 500mL de SF e apresentou diurese de 450mL nas últimas 6h. Registre o balanço conforme o enunciado.</p>
+            
+        </div>
+
+        <div class="cartao-formulario">
+            <div class="cartao-cabecalho">
+                <h2>Registros de Entradas e Saídas</h2>
+                <p>Adicione os volumes referentes ao período de acompanhamento do paciente selecionado.</p>
+            </div>
+
+            <table class="tabela-dados">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Horário</th>
+                        <th>Descrição</th>
+                        <th>Valor (mL)</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge entrada">Entrada</span></td>
+                        <td>08:00</td>
+                        <td>Soro Fisiológico 0.9% IV</td>
+                        <td>500</td>
+                        <td><button type="button" class="btn-tabela remover">Remover</button></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <select class="input-estilizado-sm">
+                                <option>Entrada</option>
+                                <option>Saída</option>
+                            </select>
+                        </td>
+                        <td><input type="time" class="input-estilizado-sm"></td>
+                        <td><input type="text" class="input-estilizado-sm" placeholder="Descrição do fluido"></td>
+                        <td><input type="number" class="input-estilizado-sm" placeholder="0"></td>
+                        <td><button type="button" class="btn-tabela adicionar">Adicionar registro</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Alerta de validação simulado (RN04) -->
+            <p class="alerta-validacao" style="display: none;">Informe um valor numérico positivo em mL[cite: 18].</p>
+
+            <div class="acoes-formulario alinhar-inicio">
+                <a href="resultado.html" class="btn-salvar">Submeter registros</a>
+                <span class="texto-aviso-bloqueio">Após o envio, a edição será bloqueada pelo sistema (RN05)[cite: 18].</span>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+</html>

@@ -1,13 +1,41 @@
 <!DOCTYPE html>
-<html lang="">
-  <head>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+    <title>HidroCare - Login</title>
+    <!-- link css -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="fundo-tela">
+    <main class="login-container">
+        <div class="login-cartao">
+            <header class="login-cabecalho">
+                <!-- título -->
+                <h1 class="logo-titulo">HidroCare</h1>
+                <p class="logo-subtitulo">Acesse o sistema</p>
+            </header>
+            <!-- caso o login e senha estiverem inválido.  -->
+            <div class="alerta-erro" id="ms-erro" style="display: none;">
+                Credenciais inválidas. Tente novamente.
+            </div>
+            <!-- formulário para login -->
+            <form class="login-form" action="painel.html" method="post">
+                <div class="grupo-input">
+                    <label for="credencial">RA(Estudante) ou PUB (Professor)</label>
+                    <input type="text" name="credencial" id="credencial" placeholder="Digite seu RA ou PUB">
+                </div>
+                <div class="grupo-input">
+                    <label for="senha">RA(Estudante) ou PUB (Professor)</label>
+                    <input type="password" name="senha" id="senha" placeholder="Digite sua senha">
+                </div>
+                <button type="submit" class="btn-entrar">Entrar</button>
+                <footer class="login-rodape">
+                    <a href="#" class="link-senha">Esqueceu a senha?</a>
+                    <p class="texto-informativo">Acesso para Professores e Estdantes</p>
+                </footer>
+            </form>
+        </div>
+    </main>
+</body>
 </html>
