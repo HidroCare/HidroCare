@@ -40,5 +40,6 @@ __screenshots__/
 
 # Variáveis de ambiente
 .env
-.env.example
+.env.*
+!.env.example
 
