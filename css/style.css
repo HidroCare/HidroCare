@@ -1,0 +1,550 @@
+/* ==========================================
+   1. RESET BÁSICO E CONFIGURAÇÕES GLOBAIS
+   ========================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f4f6f9;
+    min-height: 100vh;
+}
+
+/* ==========================================
+   2. ESTRUTURA DE TELAS E FUNDOS
+   ========================================== */
+.fundo-tela {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.fundo-painel { 
+    min-height: 100vh; 
+}
+
+/* ==========================================
+   3. MÓDULO DE LOGIN
+   ========================================== */
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+}
+
+.login-cartao {
+    background-color: #ffffff;
+    padding: 40px 35px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.login-cabecalho {
+    margin-bottom: 30px;
+}
+
+.logo-titulo {
+    color: #1a56db;
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.logo-subtitulo {
+    color: #6c757d;
+    font-size: 15px;
+}
+
+.alerta-erro {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.login-form, .login-formulario {
+    text-align: left;
+}
+
+.grupo-input {
+    margin-bottom: 20px;
+}
+
+.grupo-input label {
+    display: block;
+    margin-bottom: 8px;
+    color: #374151;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.grupo-input input, .grupo-input select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.grupo-input input:focus, .grupo-input select:focus {
+    border-color: #1a56db;
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+.btn-entrar {
+    width: 100%;
+    padding: 12px;
+    background-color: #1a56db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 25px;
+    margin-top: 10px;
+}
+
+.btn-entrar:hover {
+    background-color: #1e40af;
+}
+
+.login-rodape {
+    text-align: center;
+}
+
+.link-senha {
+    color: #1a56db;
+    text-decoration: none;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 20px;
+}
+
+.link-senha:hover {
+    text-decoration: underline;
+}
+
+.texto-informativo {
+    color: #4b5563;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+/* ==========================================
+   4. CABEÇALHOS E NAVEGAÇÃO SUPERIOR
+   ========================================== */
+.cabecalho-principal {
+    background-color: #2c3e50;
+    color: #ffffff;
+    padding: 15px 30px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.cabecalho-conteudo {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo-painel { 
+    font-size: 20px; 
+    font-weight: 600; 
+}
+
+.divisor-logo { 
+    color: #94a3b8; 
+    margin: 0 5px; 
+}
+
+.usuario-info span { 
+    margin-right: 15px; 
+    font-size: 14px; 
+    color: #cbd5e1; 
+}
+
+.link-sair { 
+    color: #ffffff; 
+    text-decoration: none; 
+    font-size: 14px; 
+    font-weight: 500; 
+}
+
+.link-sair:hover { 
+    text-decoration: underline; 
+}
+
+.painel-container {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+/* ==========================================
+   5. DASHBOARD E CARDS DE AÇÃO
+   ========================================== */
+.boas-vindas { 
+    margin-bottom: 25px; 
+}
+
+.boas-vindas h2 { 
+    color: #1e293b; 
+    font-size: 24px; 
+}
+
+.subtitulo-painel { 
+    color: #64748b; 
+    font-size: 14px; 
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.card-acao {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    border-top: 4px solid #1a56db;
+    transition: transform 0.2s;
+}
+
+.card-acao:hover { 
+    transform: translateY(-3px); 
+}
+
+.card-corpo { 
+    padding: 30px; 
+    text-align: center; 
+}
+
+.card-corpo h3 { 
+    color: #1e293b; 
+    margin-bottom: 10px; 
+    font-size: 18px; 
+}
+
+.card-corpo p { 
+    color: #64748b; 
+    font-size: 14px; 
+    margin-bottom: 20px; 
+}
+
+.btn-acao {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.btn-acao.primario { 
+    background-color: #1a56db; 
+    color: #fff; 
+}
+
+.btn-acao.primario:hover { 
+    background-color: #1e40af; 
+}
+
+/* ==========================================
+   6. FORMULÁRIOS E TABELAS
+   ========================================== */
+.cartao-formulario {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.cartao-cabecalho { 
+    margin-bottom: 25px; 
+}
+
+.cartao-cabecalho h2 { 
+    color: #1e293b; 
+    font-size: 20px; 
+    margin-bottom: 5px; 
+}
+
+.tabela-dados {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.tabela-dados th, .tabela-dados td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tabela-dados th { 
+    background-color: #f8fafc; 
+    color: #475569; 
+    font-weight: 600; 
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge.entrada { 
+    background-color: #e0f2fe; 
+    color: #0369a1; 
+}
+
+.badge.saida { 
+    background-color: #fef3c7; 
+    color: #92400e; 
+}
+
+.btn-tabela {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-tabela.remover { 
+    background-color: #fee2e2; 
+    color: #991b1b; 
+}
+
+.btn-tabela.adicionar { 
+    background-color: #dbeafe; 
+    color: #1e40af; 
+    font-weight: 600; 
+}
+
+.btn-salvar {
+    background-color: #16a34a;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn-salvar:hover { 
+    background-color: #15803d; 
+}
+
+.btn-voltar { 
+    color: #64748b; 
+    text-decoration: none; 
+    font-size: 14px; 
+    font-weight: 500; 
+}
+
+/* ==========================================
+   7. ÁREA DO ESTUDANTE E RESULTADOS
+   ========================================== */
+.bloco-paciente {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+}
+
+.bloco-paciente h3 { 
+    color: #0369a1; 
+    font-size: 16px; 
+    margin-bottom: 8px; 
+}
+
+.detalhe-paciente { 
+    color: #64748b; 
+    font-weight: normal; 
+    font-size: 13px; 
+}
+
+.bloco-paciente p { 
+    color: #334155; 
+    font-size: 14px; 
+    margin-bottom: 10px; 
+}
+
+.aviso-gabarito { 
+    color: #dc2626; 
+    font-size: 12px; 
+    font-weight: 500; 
+}
+
+.resultado-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) { 
+    .resultado-grid { grid-template-columns: 1fr; } 
+}
+
+.cartao-balanco {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-top: 4px solid #16a34a;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+}
+
+.cartao-balanco h3 { 
+    color: #475569; 
+    font-size: 16px; 
+    margin-bottom: 20px; 
+}
+
+.display-balanco { 
+    font-size: 42px; 
+    font-weight: 700; 
+    margin-bottom: 15px; 
+}
+
+.display-balanco.positivo { 
+    color: #16a34a; 
+}
+
+.badge-status {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.badge-status.positivo { 
+    background-color: #dcfce7; 
+    color: #166534; 
+}
+
+.cartao-correcao {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.cartao-correcao h3 { 
+    color: #1e293b; 
+    font-size: 18px; 
+    margin-bottom: 20px; 
+}
+
+.lista-correcao { 
+    list-style: none; 
+    margin-bottom: 25px; 
+}
+
+.lista-correcao li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+}
+
+.status-correto { 
+    background-color: #dcfce7; 
+    color: #166534; 
+    padding: 4px 10px; 
+    border-radius: 4px; 
+    font-size: 12px; 
+    font-weight: 600; 
+}
+
+.caixa-feedback {
+    background-color: #f8fafc;
+    border-left: 4px solid #3b82f6;
+    padding: 15px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 20px;
+}
+
+.caixa-feedback h4 { 
+    font-size: 14px; 
+    color: #1e293b; 
+    margin-bottom: 5px; 
+}
+
+.texto-feedback { 
+    font-size: 13px; 
+    color: #475569; 
+}
+
+/* ==========================================
+   8. UTILITÁRIOS
+   ========================================== */
+.text-align-left { text-align: left !important; }
+.mb-2 { margin-bottom: 8px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 15px; }
+
+/* CORREÇÃO DO ESPAÇAMENTO DO BOTÃO DE SUBMETER */
+.acoes-formulario {
+    margin-top: 25px; /* Empurra o botão para baixo, tirando-o de cima da tabela */
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+/* ==========================================
+   ESTILIZAÇÃO PARA INPUTS E SELECTS
+   ========================================== */
+.input-estilizado {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    background-color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-top: 5px; /* Garante um pequeno espaço caso tenha um label em cima */
+}
+
+.input-estilizado:focus {
+    border-color: #1a56db;
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+.input-estilizado-sm {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+    outline: none;
+    background-color: #ffffff;
+}
+
+.input-estilizado-sm:focus {
+    border-color: #1a56db;
+    box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.15);
+}
