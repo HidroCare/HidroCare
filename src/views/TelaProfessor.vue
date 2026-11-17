@@ -43,7 +43,7 @@
                 <span class="nome-aluno">{{ sub.usuarios?.nome || 'Aluno Oculto' }}</span>
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <span class="nota-aluno">
-                    {{ sub.resultados[0] ? sub.resultados[0].balanco_ml + 'ml' : 'Pendente' }}
+                    {{ balancoDe(sub) }}
                   </span>
                   <!-- BOTÃO QUE MANDA O PROFESSOR PARA A TELA DE RESULTADO DO ALUNO -->
                   <button @click="verDetalhesAluno(sub.id)" class="btn-acao primario" style="padding: 4px 10px; font-size: 12px;">
@@ -77,7 +77,7 @@ const cenarios = ref([])
 const carregando = ref(true)
 
 import { useAuth } from '@/composables/useAuth'
-const { user, nomeUsuario, isProfessor } = useAuth()
+const { nomeUsuario } = useAuth()
 
 const buscarCenariosDoProfessor = async (professorId) => {
   carregando.value = true
@@ -107,6 +107,19 @@ const buscarCenariosDoProfessor = async (professorId) => {
   } finally {
     carregando.value = false
   }
+}
+
+// Ao abrir a tela, busca os cenários do professor que está logado
+onMounted(async () => {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) await buscarCenariosDoProfessor(user.id)
+  else carregando.value = false
+})
+
+// resultados chega como objeto (1 por submissão); aceita lista também, por segurança
+const balancoDe = (sub) => {
+  const r = Array.isArray(sub.resultados) ? sub.resultados[0] : sub.resultados
+  return r ? r.balanco_ml + 'ml' : 'Pendente'
 }
 
 const criarNovo = () => router.push('/cadastro-cenario')

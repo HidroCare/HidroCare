@@ -1,6 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Existe só por compatibilidade: o cliente oficial é o de src/lib/supabase.js.
+// Dois createClient na mesma página criam dois "logins" concorrentes.
+export { supabase, abriuPeloLinkDeRecuperacao } from '@/lib/supabase'

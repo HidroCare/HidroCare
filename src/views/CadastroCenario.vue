@@ -103,7 +103,7 @@
           <!-- BOTÕES FINAIS -->
           <div class="acoes-formulario">
             <button type="button" @click="voltar" class="btn-voltar">Cancelar</button>
-            <button type="submit" class="btn-salvar">Publicar Cenário</button>
+            <button type="submit" class="btn-salvar" :disabled="salvando">{{ salvando ? 'Salvando...' : 'Publicar Cenário' }}</button>
           </div>
         </form>
       </div>
@@ -115,9 +115,11 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const nomeUsuario = ref('Carregando...') 
+const { nomeUsuario } = useAuth()
+const salvando = ref(false)
 
 // Variáveis para o carregamento dos pacientes
 const listaPacientes = ref([])
@@ -144,12 +146,6 @@ const novoItem = ref({
 
 // 1. BUSCA O USUÁRIO LOGADO E A LISTA DE PACIENTES AO ABRIR A TELA
 onMounted(async () => {
-  // Pega o nome do Professor
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
-    nomeUsuario.value = user.user_metadata?.nome || 'Professor(a)'
-  }
-
   // Faz a consulta na tabela "pacientes" do Supabase
   await buscarPacientes()
 })
@@ -200,22 +196,56 @@ const sair = async () => {
   }
 }
 
-// Função de salvar o cenário completo
-const salvarCenario = () => {
+// Função de salvar o cenário completo: cenário primeiro, depois os itens do gabarito
+const salvarCenario = async () => {
   if (gabarito.value.length === 0) {
     alert("Adicione pelo menos um item no gabarito antes de publicar o cenário!")
     return
   }
-  
-  // Aqui já temos o objeto pronto com paciente_id para quando você for fazer o supabase.from('cenarios').insert()
-  console.log("Dados prontos para salvar no Supabase:", {
-    ...formulario.value,
-    gabarito: gabarito.value
-  })
-  
-  alert("Cenário e Gabarito formatados corretamente para envio ao banco!")
-  // futuramente: await supabase.from('cenarios').insert({...})
-  // voltar()
+
+  salvando.value = true
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // 1. O cenário (professor_id = quem está logado)
+    const { data: cenario, error: erroCenario } = await supabase
+      .from('cenarios')
+      .insert({
+        paciente_id: formulario.value.paciente_id,
+        professor_id: user.id,
+        titulo: formulario.value.titulo,
+        enunciado: formulario.value.enunciado,
+        publicado: true
+      })
+      .select('id')
+      .single()
+    if (erroCenario) throw erroCenario
+
+    // 2. Os itens do gabarito (tipo em minúsculas e sem acento, como o banco exige)
+    const { error: erroGabarito } = await supabase
+      .from('gabarito_itens')
+      .insert(gabarito.value.map(item => ({
+        cenario_id: cenario.id,
+        tipo: item.tipo === 'Entrada' ? 'entrada' : 'saida',
+        descricao: item.descricao,
+        valor_ml: Number(item.valor),
+        horario: item.horario
+      })))
+
+    if (erroGabarito) {
+      // não deixa um cenário sem gabarito publicado
+      await supabase.from('cenarios').delete().eq('id', cenario.id)
+      throw erroGabarito
+    }
+
+    alert("Cenário publicado com sucesso!")
+    voltar()
+  } catch (error) {
+    console.error('Erro ao salvar o cenário:', error)
+    alert('Não foi possível salvar o cenário: ' + error.message)
+  } finally {
+    salvando.value = false
+  }
 }
 </script>
 

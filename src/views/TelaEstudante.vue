@@ -24,9 +24,9 @@
         <!-- CARTÃO DO PACIENTE (Repete para cada cenário vindo do banco) -->
         <div class="card-acao" v-for="cenario in cenarios" :key="cenario.id">
           <div class="card-corpo text-align-left">
-            <h3>{{ cenario.paciente }}</h3>
-            <p class="mb-2"><strong>Leito:</strong> {{ cenario.leito }}</p>
-            <p>{{ cenario.descricao }}</p>
+            <h3>{{ cenario.titulo }}</h3>
+            <p class="mb-2"><strong>Paciente:</strong> {{ cenario.pacientes?.nome }}</p>
+            <p>{{ cenario.enunciado }}</p>
             <button @click="iniciarAtividade(cenario.id)" class="btn-acao primario mt-3">
               Iniciar Atividade
             </button>
@@ -48,7 +48,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-// import { api } from '@/services/api' // Descomente quando o arquivo api.js estiver pronto
+import { supabase } from '@/lib/supabase'
 
 const router = useRouter()
 const cenarios = ref([]) 
@@ -60,20 +60,18 @@ const { user, nomeUsuario, isProfessor } = useAuth()
 const buscarCenarios = async () => {
   carregando.value = true
   try {
-    // Quando sua API estiver conectada, descomente a linha abaixo e apague o mock estático
-    // cenarios.value = await api.get('cenarios', 'id, paciente, leito, descricao')
-    
-    // MOCK ESTÁTICO (apenas para você ver o CSS funcionando agora mesmo)
-    setTimeout(() => {
-      cenarios.value = [
-        { id: 1, paciente: 'João Silva', leito: 'UTI - 04', descricao: 'Paciente pós-operatório cardíaco.' },
-        { id: 2, paciente: 'Maria Souza', leito: 'Enfermaria - 12', descricao: 'Paciente com desidratação severa.' }
-      ]
-      carregando.value = false
-    }, 500)
+    // O banco só devolve cenários PUBLICADOS para o estudante (regra de acesso do banco)
+    const { data, error } = await supabase
+      .from('cenarios')
+      .select('id, titulo, enunciado, pacientes (nome)')
+      .eq('publicado', true)
+      .order('created_at', { ascending: false })
 
+    if (error) throw error
+    cenarios.value = data || []
   } catch (error) {
     console.error('Erro ao buscar:', error)
+  } finally {
     carregando.value = false
   }
 }
@@ -82,8 +80,12 @@ onMounted(() => {
   buscarCenarios()
 })
 
-const iniciarAtividade = (id) => router.push('/atividade')
-const sair = () => router.push('/')
+// Leva o id do cenário escolhido para a tela da atividade
+const iniciarAtividade = (id) => router.push({ path: '/atividade', query: { cenario: id } })
+const sair = async () => {
+  await supabase.auth.signOut()
+  router.push('/')
+}
 </script>
 
 <style scoped>

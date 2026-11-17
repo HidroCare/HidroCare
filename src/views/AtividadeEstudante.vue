@@ -14,29 +14,15 @@
 
     <main class="painel-container">
       
-      <!-- Bloco dinâmico com os dados do paciente escolhido pelo estudante -->
+      <!-- Bloco com os dados do cenário escolhido na tela anterior -->
       <div class="bloco-paciente text-align-left">
-        <div class="linha-formulario mb-2">
-          <div class="grupo-input flex-1">
-              <label for="paciente">Paciente Fictício</label>
-              
-              <!-- SELECT DINÂMICO LIGADO AO SUPABASE -->
-              <select id="paciente" v-model="pacienteSelecionado" class="input-estilizado" required :disabled="carregandoPacientes">
-                <option value="" disabled>
-                  {{ carregandoPacientes ? 'Carregando pacientes...' : 'Selecione um paciente...' }}
-                </option>
-                <!-- Renderiza os pacientes vindos do banco de dados -->
-                <option v-for="paciente in listaPacientes" :key="paciente.id" :value="paciente.id">
-                  {{ paciente.nome }} ({{ paciente.idade }} anos) - {{ paciente.motivo_internacao }}
-                </option>
-              </select>
-            </div>
-        </div>
-        
-        <hr class="my-3">
-
-        <h3>Detalhes do Caso Clínico</h3>
-        <p>Masculino, 45 anos, 70kg. Paciente em pós-operatório de cirurgia abdominal. Recebeu 500mL de SF e apresentou diurese de 450mL nas últimas 6h. Registre o balanço conforme o enunciado.</p>
+        <p v-if="carregandoCenario">Carregando cenário...</p>
+        <template v-else-if="cenario">
+          <h3>{{ cenario.titulo }}</h3>
+          <p class="mb-2"><strong>Paciente:</strong> {{ cenario.pacientes?.nome }} ({{ cenario.pacientes?.idade }} anos) - {{ cenario.pacientes?.motivo_internacao }}</p>
+          <p>{{ cenario.enunciado }}</p>
+        </template>
+        <p v-else>Cenário não encontrado. Volte e escolha uma atividade.</p>
       </div>
 
       <div class="cartao-formulario">
@@ -95,10 +81,11 @@
         <p v-if="erroValidacao" class="alerta-validacao text-align-left">
           Informe um horário, uma descrição e um valor numérico positivo em mL.
         </p>
+        <p v-if="erroEnvio" class="alerta-validacao text-align-left">{{ erroEnvio }}</p>
 
         <!-- Ações do Formulário e Aviso de Bloqueio (RN05) -->
         <div class="acoes-formulario alinhar-inicio text-align-left">
-          <button @click="submeterAtividade" class="btn-salvar">Submeter registros</button>
+          <button @click="submeterAtividade" class="btn-salvar" :disabled="enviando || !cenario">{{ enviando ? 'Enviando...' : 'Submeter registros' }}</button>
           <span class="texto-aviso-bloqueio">Após o envio, a edição será bloqueada pelo sistema (RN05).</span>
         </div>
       </div>
@@ -109,54 +96,40 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
+const route = useRoute()
+const { nomeUsuario } = useAuth()
 
-const pacienteSelecionado = ref('')
+const cenario = ref(null)
+const carregandoCenario = ref(true)
 const erroValidacao = ref(false)
-const nomeUsuario = ref('Carregando...') 
+const erroEnvio = ref('')
+const enviando = ref(false)
 
-// Variáveis para carregar pacientes do Supabase
-const listaPacientes = ref([])
-const carregandoPacientes = ref(true)
-
-// 2. BUSCA O USUÁRIO LOGADO E OS PACIENTES AO ABRIR A TELA
+// 1. BUSCA O CENÁRIO ESCOLHIDO (id vem na URL: /atividade?cenario=...)
+// Atenção: o estudante NUNCA lê o gabarito; só o enunciado e o paciente.
 onMounted(async () => {
-  // Pega o nome do estudante
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
-    nomeUsuario.value = user.user_metadata?.nome || 'Estudante'
-  }
-  
-  // Busca os pacientes no banco
-  await buscarPacientes()
-})
-
-// Função para buscar pacientes do Supabase
-const buscarPacientes = async () => {
-  carregandoPacientes.value = true
   try {
     const { data, error } = await supabase
-      .from('pacientes')
-      .select('id, nome, idade, motivo_internacao')
-      .order('nome')
-
+      .from('cenarios')
+      .select('id, titulo, enunciado, pacientes (nome, idade, motivo_internacao)')
+      .eq('id', route.query.cenario)
+      .maybeSingle()
     if (error) throw error
-    listaPacientes.value = data
+    cenario.value = data
   } catch (error) {
-    console.error('Erro ao carregar pacientes:', error)
-    alert('Erro ao buscar os pacientes no banco de dados.')
+    console.error('Erro ao carregar o cenário:', error)
   } finally {
-    carregandoPacientes.value = false
+    carregandoCenario.value = false
   }
-}
+})
 
-// Lista de registros da atividade (Já inicia com um de exemplo)
-const registros = ref([
-  { tipo: 'Entrada', horario: '08:00', descricao: 'Soro Fisiológico 0.9% IV', valor: 500 }
-])
+// Lista de registros da atividade (começa vazia: o estudante preenche)
+const registros = ref([])
 
 const novoRegistro = ref({
   tipo: 'Entrada',
@@ -170,10 +143,10 @@ const adicionarRegistro = () => {
     erroValidacao.value = true
     return
   }
-  
+
   erroValidacao.value = false
   registros.value.push({ ...novoRegistro.value })
-  
+
   novoRegistro.value.horario = ''
   novoRegistro.value.descricao = ''
   novoRegistro.value.valor = null
@@ -183,23 +156,43 @@ const removerRegistro = (index) => {
   registros.value.splice(index, 1)
 }
 
-const submeterAtividade = () => {
+// 2. ENVIO: uma única chamada à função do banco, que grava, calcula e corrige.
+// A tela NÃO grava em submissoes/registros/resultados diretamente (o banco recusa).
+const submeterAtividade = async () => {
+  erroEnvio.value = ''
   if (registros.value.length === 0) {
-    alert("Adicione pelo menos um registro antes de submeter!")
+    erroEnvio.value = 'Adicione pelo menos um registro antes de submeter!'
     return
   }
-  router.push('/resultado')
+
+  enviando.value = true
+  const { data, error } = await supabase.rpc('enviar_atividade', {
+    p_cenario: cenario.value.id,
+    p_registros: registros.value.map(r => ({
+      tipo: r.tipo === 'Entrada' ? 'entrada' : 'saida',   // o banco usa minúsculas e sem acento
+      descricao: r.descricao,
+      valor_ml: Number(r.valor),
+      horario: r.horario
+    }))
+  })
+  enviando.value = false
+
+  if (error) {
+    erroEnvio.value = error.message   // o banco devolve a frase da regra em português
+    return
+  }
+  router.push({ path: '/resultado', query: { id: data.submissao_id } })
 }
 
-// 3. FUNÇÃO DE SAIR (LOGOUT) ATUALIZADA
+// 3. FUNÇÃO DE SAIR (LOGOUT)
 const sair = async () => {
   const { error } = await supabase.auth.signOut()
-  
+
   if (error) {
     console.error("Erro ao sair:", error)
     alert("Erro ao tentar sair do sistema.")
   } else {
-    router.push('/') 
+    router.push('/')
   }
 }
 </script>

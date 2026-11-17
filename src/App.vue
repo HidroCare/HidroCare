@@ -4,33 +4,28 @@
 </template>
 
 <script setup>
-    import { onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '@/lib/supabase'
+import { supabase, abriuPeloLinkDeRecuperacao } from '@/lib/supabase'
+import { buscarPerfil, paginaInicial } from '@/composables/useAuth'
 
 const router = useRouter()
 
 onMounted(async () => {
-  // TUTORIAL: Busca o usuário logado no navegador
-    const { data: { user }, error } = await supabase.auth.getUser()
-
-  // Se o usuário existir e estivermos na tela de Login ('/'), pula direto pra área dele
-    if (user && router.currentRoute.value.path === '/') {
-        const perfil = user.user_metadata?.perfil
-        if (perfil === 'professor') {
-            router.push('/tela-professor')
-        } else {
-            router.push('/tela-estudante')
-        }
+    // Se já existe login e estamos na tela de Login ('/'), vai direto para a área do usuário.
+    // Quem chegou pelo link de "esqueci a senha" fica no Login para definir a nova senha.
+    const { data } = await supabase.auth.getSession()
+    const usuario = data.session?.user
+    if (usuario && router.currentRoute.value.path === '/' && !abriuPeloLinkDeRecuperacao) {
+        const perfil = await buscarPerfil(usuario.id)
+        router.push(paginaInicial(perfil?.perfil))
     }
 
-  // Bônus: Isso fica "escutando" a sessão. Se a sessão expirar, expulsa pro Login.
-    supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
-        router.push('/')
-        }
-        })
+    // Ao sair (ou se a sessão for encerrada), volta para o Login
+    supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') router.push('/')
     })
+})
 </script>
 
 <style>

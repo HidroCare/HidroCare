@@ -50,7 +50,7 @@
           <ul class="lista-correcao">
             <!-- Laço de repetição puxando os itens registrados na submissão -->
             <li v-for="reg in registros" :key="reg.id">
-              <span>{{ reg.descricao }} ({{ reg.tipo }}) - {{ reg.valor_ml }}ml</span>
+              <span>{{ reg.descricao }} ({{ reg.tipo === 'entrada' ? 'Entrada' : 'Saída' }}) - {{ reg.valor_ml }}ml</span>
               
               <span v-if="reg.correto === true" class="status-correto">Correto</span>
               <span v-else-if="reg.correto === false" class="status-incorreto">Incorreto</span>
@@ -71,24 +71,26 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import { useAuth, buscarPerfil } from '@/composables/useAuth'
 
 const router = useRouter()
 const route = useRoute()
+const { nomeUsuario } = useAuth()
 
-const nomeUsuario = ref('Carregando...') 
 const carregando = ref(true)
 const resultado = ref(null)
 const registros = ref([])
-const perfilUsuario= ref('')
+const ehProfessor = ref(false)
 
 onMounted(async () => {
-  const {data: {user}}= await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if(user){
-    nomeUsuario.value = user.user_metadata?.nome || 'Usuário'
-    perfilUsuario.value =user.user_metadata?.perfilUsuario
+  if (user) {
+    // perfil vem do banco (tabela usuarios), não de dados digitados no cadastro
+    const perfil = await buscarPerfil(user.id)
+    ehProfessor.value = perfil?.perfil === 'professor'
     await buscarResultado(user.id)
-  }else{
+  } else {
     router.push('/')
   }
 })
@@ -96,9 +98,9 @@ onMounted(async () => {
 const buscarResultado = async (estudanteId) => {
   carregando.value = true
   try {
-    let submissaoId = route.query.id // Caso a tela anterior envie o ID na URL (ex: /resultado?id=123)
-    
-    // Se não tiver ID na URL, busca automaticamente a ÚLTIMA submissão deste estudante
+    let submissaoId = route.query.id // enviado pela tela anterior (ex: /resultado?id=123)
+
+    // Se não tiver ID na URL, busca a ÚLTIMA submissão deste estudante
     if (!submissaoId) {
       const { data: ultimaSubmissao } = await supabase
         .from('submissoes')
@@ -106,27 +108,27 @@ const buscarResultado = async (estudanteId) => {
         .eq('estudante_id', estudanteId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
-        
+        .maybeSingle()
+
       if (ultimaSubmissao) submissaoId = ultimaSubmissao.id
     }
 
     if (submissaoId) {
-      // 1. Puxa a tabela Resultados ligada à submissão
+      // 1. Resultado ligado à submissão (calculado pelo banco)
       const { data: resData } = await supabase
         .from('resultados')
         .select('*')
         .eq('submissao_id', submissaoId)
-        .single()
-      
+        .maybeSingle()
+
       resultado.value = resData
 
-      // 2. Puxa os itens que ele digitou (tabela Registros)
+      // 2. Itens que o estudante digitou (com "correto" já marcado pelo banco)
       const { data: regData } = await supabase
         .from('registros')
         .select('*')
         .eq('submissao_id', submissaoId)
-      
+
       registros.value = regData || []
     }
   } catch (error) {
@@ -141,7 +143,7 @@ const sair = async () => {
   router.push('/')
 }
 const voltarAoInicio = () => {
-  if (perfilUsuario.value === 'professor') {
+  if (ehProfessor.value) {
     router.push('/tela-professor') // Se for professor, volta pro painel de gestão
   } else {
     router.push('/tela-estudante') // Se for aluno, volta pra lista de atividades
