@@ -50,6 +50,11 @@
                 2. FORMULÁRIO DE CADASTRO (Primeiro Acesso)
                 ========================================== -->
             <form v-else-if="modo === 'cadastro'" class="login-formulario" @submit.prevent="realizarCadastro">
+            <!-- NOVO CAMPO: Nome -->
+            <div class="grupo-input">
+                <label for="cad-nome">Nome Completo</label>
+                <input type="text" id="cad-nome" v-model="nome" placeholder="Digite seu nome" required>
+            </div>
             <div class="grupo-input">
                 <label for="cad-email">E-mail (Para recuperação de senha)</label>
                 <input type="email" id="cad-email" v-model="email" placeholder="seu@email.com" required>
@@ -98,58 +103,63 @@
         </main>
     </div>
 </template>
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '@/lib/supabase'
 
-    <script setup>
-    import { ref } from 'vue'
-    import { useRouter } from 'vue-router'
-    import { supabase } from '@/services/supabase'
+const router = useRouter()
 
-    const router = useRouter()
+// Estados da interface
+const modo = ref('login')
+const carregando = ref(false)
+const mensagemErro = ref('')
+const mensagemSucesso = ref('')
 
-    // Estados da interface
-    const modo = ref('login') // 'login', 'cadastro', ou 'recuperar'
-    const carregando = ref(false)
-    const mensagemErro = ref('')
-    const mensagemSucesso = ref('')
+// Campos dos formulários
+const credencial = ref('') 
+const nome = ref('')
+const email = ref('')
+const senha = ref('')
 
-    // Campos dos formulários
-    const credencial = ref('') // Usado para RA/PUB ou E-mail no login
-    const email = ref('')
-    const senha = ref('')
-
-    // Função auxiliar para trocar de tela e limpar os campos/mensagens
-    const alterarModo = (novoModo) => {
+// Função auxiliar para trocar de tela
+const alterarModo = (novoModo) => {
     modo.value = novoModo
     mensagemErro.value = ''
     mensagemSucesso.value = ''
     senha.value = ''
-    if (novoModo === 'login') email.value = ''
+    if (novoModo === 'login') {
+        email.value = ''
+        credencial.value = ''
+        nome.value = ''
     }
+}
 
-    // 1. LOGIN
-    const realizarLogin = async () => {
+// 1. LOGIN
+const realizarLogin = async () => {
     carregando.value = true
     mensagemErro.value = ''
     mensagemSucesso.value = ''
 
     try {
-        // Formata caso o usuário tente logar apenas com RA/PUB ao invés do e-mail
         const identificador = credencial.value.includes('@') 
-        ? credencial.value 
-        : `${credencial.value.toLowerCase()}@hidrocare.com`
+            ? credencial.value 
+            : `${credencial.value.toLowerCase()}@hidrocare.com`
 
-        const { error } = await supabase.auth.signInWithPassword({
-        email: identificador,
-        password: senha.value,
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: identificador,
+            password: senha.value,
         })
 
         if (error) throw error
 
-        // Redireciona com base no acesso
-        if (credencial.value.toUpperCase().startsWith('PUB')) {
-        router.push('/painel-professor')
+        // CORREÇÃO AQUI: Lê o perfil direto do banco de dados (metadados do JWT)
+        const perfil = data.user.user_metadata?.perfil
+
+        if (perfil === 'professor') {
+            router.push('/tela-professor')
         } else {
-        router.push('/escolha-cenario')
+            router.push('/tela-estudante')
         }
     } catch (error) {
         mensagemErro.value = 'Credenciais inválidas. Tente novamente.'
@@ -165,24 +175,30 @@ const realizarCadastro = async () => {
     mensagemSucesso.value = ''
 
     try {
+        // CORREÇÃO AQUI: Define as variáveis que faltavam antes de enviar pro banco
+        const credencialFormatada = credencial.value.trim().toUpperCase()
+        const tipoPerfil = credencialFormatada.startsWith('PUB') ? 'professor' : 'estudante'
+
         const { error } = await supabase.auth.signUp({
-        email: email.value,
-        password: senha.value,
-        options: {
-            data: {
-            identificacao_ra_pub: credencial.value // Salva o RA ou PUB nos metadados do usuário no Supabase
+            email: email.value,
+            password: senha.value,
+            options: {
+                data: {
+                    ra: credencialFormatada, 
+                    nome: nome.value, 
+                    perfil: tipoPerfil
+                }
             }
-        }
         })
 
         if (error) throw error
 
         mensagemSucesso.value = 'Cadastro realizado! Você já pode fazer login.'
-        setTimeout(() => alterarModo('login'), 2000) // Volta pro login após 2 segundos
+        setTimeout(() => alterarModo('login'), 2000)
     } catch (error) {
         mensagemErro.value = error.message.includes('already registered') 
-        ? 'Este e-mail já está cadastrado.' 
-        : 'Erro ao realizar cadastro. Verifique os dados.'
+            ? 'Este e-mail já está cadastrado.' 
+            : 'Erro ao realizar cadastro. Verifique os dados.'
     } finally {
         carregando.value = false
     }
@@ -196,7 +212,7 @@ const recuperarSenha = async () => {
 
     try {
         const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
-        redirectTo: 'http://localhost:5173/redefinir-senha', // Para onde o link do e-mail vai apontar
+            redirectTo: 'http://localhost:5173/redefinir-senha',
         })
 
         if (error) throw error
@@ -211,32 +227,22 @@ const recuperarSenha = async () => {
 </script>
 
 <style scoped>
-/* Aproveita as suas classes globais e adiciona estilos específicos deste componente */
-.fundo-tela { background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+.fundo-tela { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
 .login-container { width: 100%; max-width: 420px; padding: 20px; }
 .login-cartao { background-color: #ffffff; padding: 40px 35px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); text-align: center; }
 .login-cabecalho { margin-bottom: 30px; }
 .logo-titulo { color: #1a56db; font-size: 32px; font-weight: 700; margin-bottom: 5px; }
 .logo-subtitulo { color: #6c757d; font-size: 15px; }
-
-/* Estilos de Alerta */
 .alerta-erro { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; text-align: left; }
-.alerta-sucesso { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; text-align: left; }
-
-.login-formulario { text-align: left; }
+.login-form, .login-formulario { text-align: left; }
 .grupo-input { margin-bottom: 20px; }
 .grupo-input label { display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px; }
-.grupo-input input { width: 100%; padding: 12px 15px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 15px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-.grupo-input input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15); }
-.btn-entrar { width: 100%; padding: 12px; background-color: #1a56db; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; margin-bottom: 20px; margin-top: 5px; }
-.btn-entrar:hover:not(:disabled) { background-color: #1e40af; }
-.btn-entrar:disabled { opacity: 0.7; cursor: not-allowed; }
-
-.login-rodape { text-align: center; display: flex; flex-direction: column; gap: 10px; }
-.link-senha { color: #64748b; text-decoration: none; font-size: 14px; }
-.link-destaque { color: #1a56db; text-decoration: none; font-size: 14px; font-weight: 600; }
-.link-senha:hover, .link-destaque:hover { text-decoration: underline; }
-.texto-informativo { color: #4b5563; font-size: 13px; }
-.mb-3 { margin-bottom: 15px; }
-.mt-3 { margin-top: 15px; }
+.grupo-input input, .grupo-input select { width: 100%; padding: 12px 15px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 15px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.grupo-input input:focus, .grupo-input select:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15); }
+.btn-entrar { width: 100%; padding: 12px; background-color: #1a56db; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; margin-bottom: 25px; margin-top: 10px; }
+.btn-entrar:hover { background-color: #1e40af; }
+.login-rodape { text-align: center; }
+.link-senha { color: #1a56db; text-decoration: none; font-size: 14px; display: block; margin-bottom: 20px; }
+.link-senha:hover { text-decoration: underline; }
+.texto-informativo { color: #4b5563; font-size: 13px; margin-bottom: 8px; }
 </style>
