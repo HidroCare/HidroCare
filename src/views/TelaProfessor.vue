@@ -37,6 +37,11 @@
             
             <hr class="linha-divisoria">
             
+            <div class="acoes-cenario">
+              <button @click="editarCenario(cenario.id)" class="btn-acao secundario">Editar</button>
+              <button @click="excluirCenario(cenario)" class="btn-acao perigo">Excluir</button>
+            </div>
+
             <h4 class="titulo-resultados">Resultados dos Alunos</h4>
             <ul v-if="cenario.submissoes && cenario.submissoes.length > 0" class="lista-alunos">
               <li v-for="sub in cenario.submissoes" :key="sub.id" class="item-aluno">
@@ -45,9 +50,11 @@
                   <span class="nota-aluno">
                     {{ balancoDe(sub) }}
                   </span>
+                  <span v-if="temFeedback(sub)" class="tag-feedback">Feedback enviado</span>
+                  <span v-else class="tag-sem-feedback">Sem feedback</span>
                   <!-- BOTÃO QUE MANDA O PROFESSOR PARA A TELA DE RESULTADO DO ALUNO -->
                   <button @click="verDetalhesAluno(sub.id)" class="btn-acao primario" style="padding: 4px 10px; font-size: 12px;">
-                    Ver Correção
+                    Corrigir e dar feedback
                   </button>
                 </div>
               </li>
@@ -94,7 +101,8 @@ const buscarCenariosDoProfessor = async (professorId) => {
           id,
           enviada_em,
           usuarios (nome),
-          resultados (balanco_ml)
+          resultados (balanco_ml),
+          feedbacks (id)
         )
       `)
       .eq('professor_id', professorId)
@@ -120,6 +128,35 @@ onMounted(async () => {
 const balancoDe = (sub) => {
   const r = Array.isArray(sub.resultados) ? sub.resultados[0] : sub.resultados
   return r ? r.balanco_ml + 'ml' : 'Pendente'
+}
+
+// A submissão tem feedback se existir ao menos uma linha em feedbacks
+const temFeedback = (sub) => Array.isArray(sub.feedbacks) && sub.feedbacks.length > 0
+
+// Abre o formulário do cenário em modo edição
+const editarCenario = (id) => router.push({ path: '/cadastro-cenario', query: { id } })
+
+// Exclui o cenário. Atenção: o banco apaga junto o gabarito, as respostas, os resultados
+// e os feedbacks desse cenário (ON DELETE CASCADE). Por isso o aviso muda se já há respostas.
+const excluirCenario = async (cenario) => {
+  const respostas = cenario.submissoes ? cenario.submissoes.length : 0
+  const aviso = respostas > 0
+    ? `O cenário "${cenario.titulo}" já tem ${respostas} resposta(s) de estudantes. Excluir apagará também as respostas, os resultados e os feedbacks. Isso não pode ser desfeito. Excluir mesmo assim?`
+    : `Excluir o cenário "${cenario.titulo}"? Isso não pode ser desfeito.`
+  if (!confirm(aviso)) return
+
+  const { data, error } = await supabase
+    .from('cenarios')
+    .delete()
+    .eq('id', cenario.id)
+    .select('id')
+
+  if (error || !data || data.length === 0) {
+    console.error('Erro ao excluir o cenário:', error)
+    alert('Não foi possível excluir o cenário.')
+    return
+  }
+  cenarios.value = cenarios.value.filter(c => c.id !== cenario.id)
 }
 
 const criarNovo = () => router.push('/cadastro-cenario')
@@ -176,4 +213,12 @@ const verDetalhesAluno = (submissaoId) => {
 .text-align-left { text-align: left !important; }
 .text-align-center { text-align: center !important; }
 .mb-2 { margin-bottom: 8px; }
+
+.acoes-cenario { display: flex; gap: 10px; margin-bottom: 18px; }
+.btn-acao.secundario { background-color: #e2e8f0; color: #1e293b; padding: 6px 14px; font-size: 13px; }
+.btn-acao.secundario:hover { background-color: #cbd5e1; }
+.btn-acao.perigo { background-color: #fee2e2; color: #b91c1c; padding: 6px 14px; font-size: 13px; }
+.btn-acao.perigo:hover { background-color: #fecaca; }
+.tag-feedback { font-size: 11px; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 10px; }
+.tag-sem-feedback { font-size: 11px; color: #92400e; background: #fef3c7; padding: 2px 8px; border-radius: 10px; }
 </style>
