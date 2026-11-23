@@ -14,7 +14,7 @@
     <main class="painel-container">
       <div class="cartao-formulario">
         <div class="cartao-cabecalho text-align-left">
-          <h2>Cadastrar Novo Cenário Clínico</h2>
+          <h2>{{ editando ? 'Editar Cenário Clínico' : 'Cadastrar Novo Cenário Clínico' }}</h2>
           <p class="subtitulo-painel">Preencha os dados do caso e monte o gabarito oficial.</p>
         </div>
 
@@ -49,9 +49,21 @@
             <textarea id="enunciado" v-model="formulario.enunciado" class="input-estilizado textarea" rows="4" placeholder="Descreva a situação clínica e os dados iniciais do paciente..." required></textarea>
           </div>
 
+          <!-- PUBLICAÇÃO -->
+          <div class="grupo-input text-align-left">
+            <label class="opcao-publicar">
+              <input type="checkbox" v-model="formulario.publicado">
+              Publicar para os estudantes (desmarcado = rascunho, só você vê)
+            </label>
+          </div>
+
           <!-- SEÇÃO DO GABARITO (A Tabela) -->
           <div class="secao-gabarito text-align-left">
             <h3>Gabarito Obrigatório (Entradas e Saídas)</h3>
+            <p v-if="gabaritoBloqueado" class="aviso-gabarito">
+              Este cenário já tem {{ totalRespostas }} resposta(s) de estudantes. O gabarito não pode mais ser alterado,
+              para não mudar a correção de quem já respondeu. Título, enunciado, paciente e publicação continuam editáveis.
+            </p>
             
             <div style="overflow-x: auto;">
               <table class="tabela-dados">
@@ -76,12 +88,12 @@
                     <td>{{ item.descricao }}</td>
                     <td>{{ item.valor }}</td>
                     <td>
-                      <button type="button" @click="removerItemGabarito(index)" class="btn-tabela remover">Remover</button>
+                      <button v-if="!gabaritoBloqueado" type="button" @click="removerItemGabarito(index)" class="btn-tabela remover">Remover</button>
                     </td>
                   </tr>
 
                   <!-- LINHA PARA ADIÇÃO DE NOVO ITEM -->
-                  <tr class="linha-adicao">
+                  <tr v-if="!gabaritoBloqueado" class="linha-adicao">
                     <td>
                       <select v-model="novoItem.tipo" class="input-estilizado-sm">
                         <option value="Entrada">Entrada</option>
@@ -103,7 +115,7 @@
           <!-- BOTÕES FINAIS -->
           <div class="acoes-formulario">
             <button type="button" @click="voltar" class="btn-voltar">Cancelar</button>
-            <button type="submit" class="btn-salvar" :disabled="salvando">{{ salvando ? 'Salvando...' : 'Publicar Cenário' }}</button>
+            <button type="submit" class="btn-salvar" :disabled="salvando">{{ salvando ? 'Salvando...' : (editando ? 'Salvar alterações' : 'Salvar Cenário') }}</button>
           </div>
         </form>
       </div>
@@ -112,14 +124,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
+const route = useRoute()
 const { nomeUsuario } = useAuth()
 const salvando = ref(false)
+
+// Modo edição: a tela do professor abre /cadastro-cenario?id=<cenário>
+const cenarioId = route.query.id
+const editando = !!cenarioId
+const totalRespostas = ref(0)
+const idsOriginaisGabarito = ref([])
+// Com respostas já enviadas o gabarito fica travado (as correções já foram calculadas com ele)
+const gabaritoBloqueado = computed(() => editando && totalRespostas.value > 0)
 
 // Variáveis para o carregamento dos pacientes
 const listaPacientes = ref([])
@@ -129,11 +150,12 @@ const carregandoPacientes = ref(true)
 const formulario = ref({
   paciente_id: '', // Alterado para armazenar o ID do paciente (chave estrangeira)
   titulo: '',
-  enunciado: ''
+  enunciado: '',
+  publicado: true
 })
 
-// Lista que armazena os itens salvos no gabarito
-const gabarito = ref([
+// Lista que armazena os itens salvos no gabarito (ao editar, vem do banco)
+const gabarito = ref(editando ? [] : [
   { tipo: 'Entrada', horario: '08:00', descricao: 'Soro Fisiológico 0.9% IV', valor: 500 }
 ])
 
@@ -144,10 +166,10 @@ const novoItem = ref({
   valor: null
 })
 
-// 1. BUSCA O USUÁRIO LOGADO E A LISTA DE PACIENTES AO ABRIR A TELA
+// 1. AO ABRIR A TELA: carrega os pacientes e, se for edição, o cenário e o gabarito
 onMounted(async () => {
-  // Faz a consulta na tabela "pacientes" do Supabase
   await buscarPacientes()
+  if (editando) await carregarCenario()
 })
 
 const buscarPacientes = async () => {
@@ -166,6 +188,52 @@ const buscarPacientes = async () => {
   } finally {
     carregandoPacientes.value = false
   }
+}
+
+// Carrega o cenário que será editado (só o professor dono pode editar)
+const carregarCenario = async () => {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: cenario } = await supabase
+    .from('cenarios')
+    .select('id, paciente_id, professor_id, titulo, enunciado, publicado')
+    .eq('id', cenarioId)
+    .maybeSingle()
+
+  if (!cenario || cenario.professor_id !== user?.id) {
+    alert('Cenário não encontrado ou não pertence a você.')
+    voltar()
+    return
+  }
+
+  formulario.value = {
+    paciente_id: cenario.paciente_id,
+    titulo: cenario.titulo,
+    enunciado: cenario.enunciado,
+    publicado: cenario.publicado
+  }
+
+  const { data: itens } = await supabase
+    .from('gabarito_itens')
+    .select('id, tipo, horario, descricao, valor_ml')
+    .eq('cenario_id', cenarioId)
+    .order('horario')
+
+  // o banco guarda "entrada"/"saida"; a tela mostra "Entrada"/"Saída"
+  gabarito.value = (itens || []).map(i => ({
+    id: i.id,
+    tipo: i.tipo === 'entrada' ? 'Entrada' : 'Saída',
+    horario: (i.horario || '').slice(0, 5),
+    descricao: i.descricao,
+    valor: Number(i.valor_ml)
+  }))
+  idsOriginaisGabarito.value = gabarito.value.map(i => i.id)
+
+  // Quantos estudantes já responderam? (trava o gabarito)
+  const { count } = await supabase
+    .from('submissoes')
+    .select('id', { count: 'exact', head: true })
+    .eq('cenario_id', cenarioId)
+  totalRespostas.value = count || 0
 }
 
 // Funções da Tabela do Gabarito
@@ -196,49 +264,88 @@ const sair = async () => {
   }
 }
 
-// Função de salvar o cenário completo: cenário primeiro, depois os itens do gabarito
+// O banco usa "entrada"/"saida" em minúsculas e sem acento
+const paraBanco = (item, idCenario) => ({
+  cenario_id: idCenario,
+  tipo: item.tipo === 'Entrada' ? 'entrada' : 'saida',
+  descricao: item.descricao,
+  valor_ml: Number(item.valor),
+  horario: item.horario
+})
+
+// CRIAR: cenário primeiro, depois os itens do gabarito
+const criarCenario = async (user) => {
+  const { data: cenario, error: erroCenario } = await supabase
+    .from('cenarios')
+    .insert({
+      paciente_id: formulario.value.paciente_id,
+      professor_id: user.id,
+      titulo: formulario.value.titulo,
+      enunciado: formulario.value.enunciado,
+      publicado: formulario.value.publicado
+    })
+    .select('id')
+    .single()
+  if (erroCenario) throw erroCenario
+
+  const { error: erroGabarito } = await supabase
+    .from('gabarito_itens')
+    .insert(gabarito.value.map(item => paraBanco(item, cenario.id)))
+
+  if (erroGabarito) {
+    // não deixa um cenário sem gabarito
+    await supabase.from('cenarios').delete().eq('id', cenario.id)
+    throw erroGabarito
+  }
+}
+
+// EDITAR: atualiza o cenário e sincroniza o gabarito (itens novos entram, removidos saem)
+const atualizarCenario = async () => {
+  const { data: atualizado, error: erroCenario } = await supabase
+    .from('cenarios')
+    .update({
+      paciente_id: formulario.value.paciente_id,
+      titulo: formulario.value.titulo,
+      enunciado: formulario.value.enunciado,
+      publicado: formulario.value.publicado
+    })
+    .eq('id', cenarioId)
+    .select('id')
+  if (erroCenario) throw erroCenario
+  if (!atualizado || atualizado.length === 0) throw new Error('Sem permissão para alterar este cenário.')
+
+  if (gabaritoBloqueado.value) return
+
+  // 1º insere os novos (se falhar, nada foi apagado); 2º apaga os removidos
+  const novos = gabarito.value.filter(item => !item.id)
+  if (novos.length > 0) {
+    const { error } = await supabase.from('gabarito_itens').insert(novos.map(item => paraBanco(item, cenarioId)))
+    if (error) throw error
+  }
+
+  const removidos = idsOriginaisGabarito.value.filter(id => !gabarito.value.some(item => item.id === id))
+  if (removidos.length > 0) {
+    const { error } = await supabase.from('gabarito_itens').delete().in('id', removidos)
+    if (error) throw error
+  }
+}
+
+// Botão do formulário
 const salvarCenario = async () => {
   if (gabarito.value.length === 0) {
-    alert("Adicione pelo menos um item no gabarito antes de publicar o cenário!")
+    alert("Adicione pelo menos um item no gabarito antes de salvar o cenário!")
     return
   }
 
   salvando.value = true
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-
-    // 1. O cenário (professor_id = quem está logado)
-    const { data: cenario, error: erroCenario } = await supabase
-      .from('cenarios')
-      .insert({
-        paciente_id: formulario.value.paciente_id,
-        professor_id: user.id,
-        titulo: formulario.value.titulo,
-        enunciado: formulario.value.enunciado,
-        publicado: true
-      })
-      .select('id')
-      .single()
-    if (erroCenario) throw erroCenario
-
-    // 2. Os itens do gabarito (tipo em minúsculas e sem acento, como o banco exige)
-    const { error: erroGabarito } = await supabase
-      .from('gabarito_itens')
-      .insert(gabarito.value.map(item => ({
-        cenario_id: cenario.id,
-        tipo: item.tipo === 'Entrada' ? 'entrada' : 'saida',
-        descricao: item.descricao,
-        valor_ml: Number(item.valor),
-        horario: item.horario
-      })))
-
-    if (erroGabarito) {
-      // não deixa um cenário sem gabarito publicado
-      await supabase.from('cenarios').delete().eq('id', cenario.id)
-      throw erroGabarito
+    if (editando) {
+      await atualizarCenario()
+    } else {
+      const { data: { user } } = await supabase.auth.getUser()
+      await criarCenario(user)
     }
-
-    alert("Cenário publicado com sucesso!")
+    alert(editando ? 'Cenário atualizado!' : 'Cenário salvo com sucesso!')
     voltar()
   } catch (error) {
     console.error('Erro ao salvar o cenário:', error)
@@ -308,4 +415,8 @@ const salvarCenario = async () => {
 .btn-voltar:hover { text-decoration: underline; }
 
 .text-align-left { text-align: left !important; }
+
+/* EDIÇÃO */
+.opcao-publicar { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #374151; cursor: pointer; }
+.aviso-gabarito { background: #fff7e6; border: 1px solid #fcd9a0; color: #8a5a00; padding: 10px 12px; border-radius: 6px; font-size: 13px; margin: 10px 0; }
 </style>
