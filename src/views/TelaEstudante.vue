@@ -27,7 +27,10 @@
             <h3>{{ cenario.titulo }}</h3>
             <p class="mb-2"><strong>Paciente:</strong> {{ cenario.pacientes?.nome }}</p>
             <p>{{ cenario.enunciado }}</p>
-            <button @click="iniciarAtividade(cenario.id)" class="btn-acao primario mt-3">
+            <button v-if="respondidas[cenario.id]" @click="verResultado(respondidas[cenario.id])" class="btn-acao primario mt-3">
+              Ver resultado e feedback
+            </button>
+            <button v-else @click="iniciarAtividade(cenario.id)" class="btn-acao primario mt-3">
               Iniciar Atividade
             </button>
           </div>
@@ -53,6 +56,7 @@ import { supabase } from '@/lib/supabase'
 const router = useRouter()
 const cenarios = ref([]) 
 const carregando = ref(true)
+const respondidas = ref({}) // id do cenário -> id da submissão já enviada pelo estudante
 
 import { useAuth } from '@/composables/useAuth'
 const { user, nomeUsuario, isProfessor } = useAuth()
@@ -69,6 +73,14 @@ const buscarCenarios = async () => {
 
     if (error) throw error
     cenarios.value = data || []
+
+    // Cenários que este estudante já respondeu (o banco só devolve as submissões dele)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: subs } = await supabase
+      .from('submissoes')
+      .select('id, cenario_id')
+      .eq('estudante_id', user.id)
+    respondidas.value = Object.fromEntries((subs || []).map(sub => [sub.cenario_id, sub.id]))
   } catch (error) {
     console.error('Erro ao buscar:', error)
   } finally {
@@ -82,6 +94,7 @@ onMounted(() => {
 
 // Leva o id do cenário escolhido para a tela da atividade
 const iniciarAtividade = (id) => router.push({ path: '/atividade', query: { cenario: id } })
+const verResultado = (submissaoId) => router.push({ path: '/resultado', query: { id: submissaoId } })
 const sair = async () => {
   await supabase.auth.signOut()
   router.push('/')
