@@ -5,7 +5,7 @@
       <div class="cabecalho-conteudo">
         <div class="logo-painel">HidroCare <span class="divisor-logo">|</span> Resultado</div>
         <div class="usuario-info">
-          <span>Estudante: {{ nomeUsuario }}</span>
+          <span>{{ ehProfessor ? 'Professor(a)' : 'Estudante' }}: {{ nomeUsuario }}</span>
           <a href="#" @click.prevent="sair" class="link-sair">Sair</a>
         </div>
       </div>
@@ -16,12 +16,17 @@
         <p>Calculando seu resultado no banco de dados...</p>
       </div>
 
-      <div v-else-if="!resultado" class="mensagem-carregando">
+      <div v-if="!carregando && !resultado" class="mensagem-carregando">
         <p>Nenhum resultado encontrado. Volte ao início e faça uma atividade.</p>
         <button @click="voltarAoInicio" class="btn-salvar mt-3">Voltar ao Início</button>
       </div>
       
-      <div v-else class="resultado-grid text-align-left">
+      <div v-if="!carregando && resultado && ehProfessor && submissao" class="identificacao-aluno text-align-left">
+        <strong>Estudante:</strong> {{ submissao.usuarios?.nome || 'Aluno' }}
+        &nbsp;·&nbsp; <strong>Cenário:</strong> {{ submissao.cenarios?.titulo || 'Cenário' }}
+      </div>
+
+      <div v-if="!carregando && resultado" class="resultado-grid text-align-left">
         <!-- LADO ESQUERDO: BALANÇO -->
         <div class="cartao-balanco">
           <h3>Balanço Hídrico Calculado</h3>
@@ -42,7 +47,7 @@
           <div class="caixa-feedback">
             <h4>Desempenho Geral</h4>
             <p class="texto-feedback">
-              Você teve <strong>{{ resultado.acertos }} acertos</strong> e <strong>{{ resultado.erros }} erros</strong>. 
+              {{ ehProfessor ? 'O estudante teve' : 'Você teve' }} <strong>{{ resultado.acertos }} acertos</strong> e <strong>{{ resultado.erros }} erros</strong>. 
               Classificação: {{ resultado.classificacao || 'Concluído' }}.
             </p>
           </div>
@@ -58,6 +63,36 @@
             </li>
           </ul>
 
+          <!-- FEEDBACK DO PROFESSOR -->
+          <div class="caixa-feedback-professor">
+            <h4>Feedback do professor</h4>
+
+            <!-- Professor: escreve, salva, edita e exclui o próprio feedback -->
+            <template v-if="ehProfessor">
+              <textarea v-model="textoFeedback" rows="4" class="campo-feedback"
+                placeholder="Escreva o feedback para este estudante..."></textarea>
+              <p v-if="erroFeedback" class="alerta-feedback">{{ erroFeedback }}</p>
+              <p v-if="msgFeedback" class="ok-feedback">{{ msgFeedback }}</p>
+              <div class="acoes-feedback">
+                <button @click="salvarFeedback" class="btn-salvar" :disabled="salvandoFeedback">
+                  {{ salvandoFeedback ? 'Salvando...' : (meuFeedback ? 'Atualizar feedback' : 'Enviar feedback') }}
+                </button>
+                <button v-if="meuFeedback" @click="excluirFeedback" class="btn-excluir-feedback" :disabled="salvandoFeedback">
+                  Excluir feedback
+                </button>
+              </div>
+            </template>
+
+            <!-- Estudante: só lê -->
+            <template v-else>
+              <p v-if="feedbacks.length === 0" class="sem-feedback">O professor ainda não enviou feedback.</p>
+              <div v-for="fb in feedbacks" :key="fb.id" class="item-feedback">
+                <p>{{ fb.comentario }}</p>
+                <small>{{ formatarData(fb.criado_em) }}</small>
+              </div>
+            </template>
+          </div>
+
           <div class="acoes-formulario" style="justify-content: flex-end;">
             <button @click="voltarAoInicio" class="btn-salvar">Concluir e Voltar</button>
           </div>
@@ -68,7 +103,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { useAuth, buscarPerfil } from '@/composables/useAuth'
@@ -80,12 +115,24 @@ const { nomeUsuario } = useAuth()
 const carregando = ref(true)
 const resultado = ref(null)
 const registros = ref([])
+const submissao = ref(null)
 const ehProfessor = ref(false)
+const usuarioId = ref(null)
+
+// Feedback
+const feedbacks = ref([])
+const textoFeedback = ref('')
+const salvandoFeedback = ref(false)
+const erroFeedback = ref('')
+const msgFeedback = ref('')
+// o feedback que ESTE professor já escreveu (só ele pode editar ou excluir)
+const meuFeedback = computed(() => feedbacks.value.find(f => f.professor_id === usuarioId.value) || null)
 
 onMounted(async () => {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
+    usuarioId.value = user.id
     // perfil vem do banco (tabela usuarios), não de dados digitados no cadastro
     const perfil = await buscarPerfil(user.id)
     ehProfessor.value = perfil?.perfil === 'professor'
@@ -130,6 +177,17 @@ const buscarResultado = async (estudanteId) => {
         .eq('submissao_id', submissaoId)
 
       registros.value = regData || []
+
+      // 3. Quem respondeu e qual cenário (o professor vê isso no topo)
+      const { data: subData } = await supabase
+        .from('submissoes')
+        .select('id, usuarios (nome), cenarios (titulo)')
+        .eq('id', submissaoId)
+        .maybeSingle()
+      submissao.value = subData
+
+      // 4. Feedbacks dessa submissão
+      await carregarFeedbacks(submissaoId)
     }
   } catch (error) {
     console.error('Erro ao buscar o resultado:', error)
@@ -137,6 +195,60 @@ const buscarResultado = async (estudanteId) => {
     carregando.value = false
   }
 }
+
+const carregarFeedbacks = async (submissaoId) => {
+  const { data } = await supabase
+    .from('feedbacks')
+    .select('id, professor_id, comentario, criado_em')
+    .eq('submissao_id', submissaoId)
+    .order('criado_em', { ascending: false })
+  feedbacks.value = data || []
+  textoFeedback.value = meuFeedback.value ? meuFeedback.value.comentario : ''
+}
+
+// Cria o feedback ou atualiza o que o próprio professor já tinha escrito
+const salvarFeedback = async () => {
+  erroFeedback.value = ''
+  msgFeedback.value = ''
+  const comentario = textoFeedback.value.trim()
+  if (!comentario) {
+    erroFeedback.value = 'Escreva o feedback antes de enviar.'
+    return
+  }
+
+  salvandoFeedback.value = true
+  const resposta = meuFeedback.value
+    ? await supabase.from('feedbacks').update({ comentario }).eq('id', meuFeedback.value.id).select('id')
+    : await supabase.from('feedbacks').insert({
+        submissao_id: route.query.id || submissao.value?.id,
+        professor_id: usuarioId.value,
+        comentario
+      }).select('id')
+  salvandoFeedback.value = false
+
+  if (resposta.error || !resposta.data || resposta.data.length === 0) {
+    console.error('Erro ao salvar o feedback:', resposta.error)
+    erroFeedback.value = 'Não foi possível salvar o feedback.'
+    return
+  }
+  msgFeedback.value = 'Feedback salvo! O estudante já pode ver.'
+  await carregarFeedbacks(route.query.id || submissao.value?.id)
+}
+
+const excluirFeedback = async () => {
+  if (!confirm('Excluir o seu feedback desta resposta?')) return
+  erroFeedback.value = ''
+  msgFeedback.value = ''
+  const { data, error } = await supabase.from('feedbacks').delete().eq('id', meuFeedback.value.id).select('id')
+  if (error || !data || data.length === 0) {
+    erroFeedback.value = 'Não foi possível excluir o feedback.'
+    return
+  }
+  msgFeedback.value = 'Feedback excluído.'
+  await carregarFeedbacks(route.query.id || submissao.value?.id)
+}
+
+const formatarData = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') : ''
 
 const sair = async () => {
   await supabase.auth.signOut()
@@ -199,4 +311,17 @@ const voltarAoInicio = () => {
 .btn-salvar:hover { background-color: #1e40af; }
 .mt-3 { margin-top: 15px; }
 .text-align-left { text-align: left !important; }
+
+/* IDENTIFICAÇÃO E FEEDBACK */
+.identificacao-aluno { background: #eef4fa; border: 1px solid #d5e3f3; border-radius: 6px; padding: 10px 14px; margin-bottom: 15px; font-size: 14px; color: #1e293b; }
+.caixa-feedback-professor { margin-top: 20px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+.caixa-feedback-professor h4 { color: #1e293b; margin-bottom: 10px; }
+.campo-feedback { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; resize: vertical; }
+.acoes-feedback { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+.btn-excluir-feedback { background: #fee2e2; color: #b91c1c; border: none; border-radius: 6px; padding: 10px 16px; font-weight: 600; cursor: pointer; }
+.alerta-feedback { color: #dc2626; font-size: 13px; margin-top: 8px; }
+.ok-feedback { color: #166534; font-size: 13px; margin-top: 8px; }
+.sem-feedback { color: #94a3b8; font-style: italic; font-size: 14px; }
+.item-feedback { background: #ffffff; border-left: 4px solid #1a56db; padding: 10px 12px; margin-bottom: 8px; font-size: 14px; color: #1e293b; }
+.item-feedback small { color: #94a3b8; }
 </style>
