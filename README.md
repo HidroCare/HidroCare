@@ -1,38 +1,49 @@
 # HidroCare
 
-This template should help get you started developing with Vue 3 in Vite.
+Simulador de balanço hídrico para o curso de Enfermagem. Projeto Integrador do curso Técnico em Desenvolvimento de Sistemas (Senac Minas).
 
-## Recommended IDE Setup
+- Professor: cadastra cenários, vê as respostas dos estudantes e envia feedback.
+- Estudante: responde os cenários publicados e lê o resultado e o feedback.
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+Tecnologias: Vue 3, Vite, Vue Router e Supabase (autenticação e banco PostgreSQL).
 
-## Recommended Browser Setup
+## Como rodar
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+Requisito: Node `^22.18.0` ou `>=24.12.0` (confira com `node -v`).
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+```bash
+git clone https://github.com/HidroCare/hidrocare.git
+cd hidrocare
+npm ci
 ```
 
-### Compile and Hot-Reload for Development
+Crie o arquivo `.env.local` na raiz (ele NÃO vai para o GitHub) com os dados do projeto Supabase:
 
-```sh
-npm run dev
+```
+VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+VITE_SUPABASE_ANON_KEY=SUA_CHAVE_ANON
 ```
 
-### Compile and Minify for Production
+Depois:
 
-```sh
-npm run build
+```bash
+npm run dev      # abre em http://localhost:5173
+npm run build    # gera a pasta dist
 ```
+
+Nunca publique a chave `service_role` nem faça commit de `.env.local`.
+
+## Banco de dados
+
+Os scripts SQL estão em `database/`. Rode no SQL Editor do Supabase, na ordem numérica (01 a 08). Os de número 09 e 10 são opcionais.
+
+## Login
+
+- Professor: e-mail `pubXXXX@mg.senac.br`
+- Estudante: e-mail `RA@senacminas.edu.br`
+
+O perfil é definido pelo e-mail, no banco.
+
+## Equipe
+
+Alteir Lincoln, Kayky Augusto, Larissa Prado e Marco Antonio Barbosa.
