@@ -119,7 +119,8 @@ const buscarCenariosDoProfessor = async (professorId) => {
 
 // Ao abrir a tela, busca os cenários do professor que está logado
 onMounted(async () => {
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
   if (user) await buscarCenariosDoProfessor(user.id)
   else carregando.value = false
 })

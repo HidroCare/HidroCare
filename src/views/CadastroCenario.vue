@@ -192,7 +192,8 @@ const buscarPacientes = async () => {
 
 // Carrega o cenário que será editado (só o professor dono pode editar)
 const carregarCenario = async () => {
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
   const { data: cenario } = await supabase
     .from('cenarios')
     .select('id, paciente_id, professor_id, titulo, enunciado, publicado')
@@ -342,7 +343,8 @@ const salvarCenario = async () => {
     if (editando) {
       await atualizarCenario()
     } else {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
       await criarCenario(user)
     }
     alert(editando ? 'Cenário atualizado!' : 'Cenário salvo com sucesso!')

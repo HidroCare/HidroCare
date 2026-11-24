@@ -47,7 +47,7 @@
           <div class="caixa-feedback">
             <h4>Desempenho Geral</h4>
             <p class="texto-feedback">
-              {{ ehProfessor ? 'O estudante teve' : 'Você teve' }} <strong>{{ resultado.acertos }} acertos</strong> e <strong>{{ resultado.erros }} erros</strong>. 
+              {{ ehProfessor ? 'O estudante teve' : 'Você teve' }} <strong>{{ resultado.acertos }} {{ resultado.acertos === 1 ? 'acerto' : 'acertos' }}</strong> e <strong>{{ resultado.erros }} {{ resultado.erros === 1 ? 'erro' : 'erros' }}</strong>. 
               Classificação: {{ resultado.classificacao || 'Concluído' }}.
             </p>
           </div>
@@ -129,7 +129,8 @@ const msgFeedback = ref('')
 const meuFeedback = computed(() => feedbacks.value.find(f => f.professor_id === usuarioId.value) || null)
 
 onMounted(async () => {
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
 
   if (user) {
     usuarioId.value = user.id

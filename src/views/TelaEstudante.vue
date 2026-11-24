@@ -75,7 +75,8 @@ const buscarCenarios = async () => {
     cenarios.value = data || []
 
     // Cenários que este estudante já respondeu (o banco só devolve as submissões dele)
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     const { data: subs } = await supabase
       .from('submissoes')
       .select('id, cenario_id')
