@@ -10,10 +10,10 @@ import { buscarPerfil, paginaInicial } from '@/composables/useAuth'
 
 const routes = [
     { path: '/', component: Login },
-    { path: '/tela-estudante', component: TelaEstudante },
-    { path: '/tela-professor', component: TelaProfessor, meta: { soProfessor: true } },
-    { path: '/cadastro-cenario', component: CadastroCenario, meta: { soProfessor: true } },
-    { path: '/atividade', component: AtividadeEstudante },
+    { path: '/tela-estudante', component: TelaEstudante, meta: { perfil: 'estudante' } },
+    { path: '/tela-professor', component: TelaProfessor, meta: { perfil: 'professor' } },
+    { path: '/cadastro-cenario', component: CadastroCenario, meta: { perfil: 'professor' } },
+    { path: '/atividade', component: AtividadeEstudante, meta: { perfil: 'estudante' } },
     { path: '/resultado', component: Resultado }
 ]
 
@@ -26,17 +26,33 @@ const router = createRouter({
 // As telas de professor só abrem para quem é professor NO BANCO (tabela usuarios).
 // (a segurança de verdade continua nas regras do banco; isto só evita telas erradas)
 router.beforeEach(async (to) => {
-    if (to.path === '/') return true
+    // A tela de login permanece acessível.
+    if (to.path === '/') return true;
 
-    const { data } = await supabase.auth.getSession()
-    const usuario = data.session?.user
-    if (!usuario) return '/'
+    // Verifica se existe uma sessão autenticada.
+    const { data, error } = await supabase.auth.getSession();
+    const usuario = data.session?.user;
 
-    if (to.meta.soProfessor) {
-        const perfil = await buscarPerfil(usuario.id)
-        if (perfil?.perfil !== 'professor') return paginaInicial(perfil?.perfil)
+    if (error || !usuario) {
+        return '/';
     }
-    return true
+
+    // Verifica o perfil somente quando a rota exige um perfil específico.
+    const perfilNecessario = to.meta.perfil;
+    if (perfilNecessario) {
+        const perfil = await buscarPerfil(usuario.id);
+        // Perfil inexistente ou não identificado.
+        if (!perfil?.perfil) {
+            await supabase.auth.signOut();
+            return '/';
+        }
+
+        // Impede o acesso quando o perfil não corresponde à rota.
+        if (perfil.perfil !== perfilNecessario) {
+            return paginaInicial(perfil.perfil);
+        }
+    }
+    return true;
 })
 
 export default router
