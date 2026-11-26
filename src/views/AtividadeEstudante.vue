@@ -4,7 +4,7 @@
     <!-- Cabeçalho da página do estudante -->
     <header class="cabecalho-principal estudante">
       <div class="cabecalho-conteudo">
-        <div class="logo-painel">HidroCare <span class="divisor-logo">|</span> Atividade</div>
+        <div class="logo-painel"><a href="#" @click.prevent="voltar" class="link-sair">HidroCare </a><span class="divisor-logo">|</span> Atividade</div>
         <div class="usuario-info">
           <span>Estudante: {{nomeUsuario}}</span>
           <a href="#" @click.prevent="sair" class="link-sair">Sair</a>
@@ -194,6 +194,12 @@ const sair = async () => {
   } else {
     router.push('/')
   }
+}
+// 3. FUNÇÃO DE VOltar
+const voltar = async () => {
+  
+  router.push('/tela-estudante')
+
 }
 </script>
 
