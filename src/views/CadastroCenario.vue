@@ -3,7 +3,7 @@
     <!-- CABEÇALHO -->
     <header class="cabecalho-principal">
       <div class="cabecalho-conteudo">
-        <div class="logo-painel">HidroCare <span class="divisor-logo">|</span> Gestão</div>
+        <div class="logo-painel"><a href="#" @click.prevent="voltar" class="link-sair">HidroCare</a> <span class="divisor-logo">|</span> Gestão</div>
         <div class="usuario-info">
           <span>Professor(a): {{ nomeUsuario }}</span>
           <a href="#" @click.prevent="sair" class="link-sair">Sair</a>
